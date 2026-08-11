@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  container_c:
+    image: rabbitmq:3-management
+    container_name: container_c_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  container_a:
+    build: ./container_a
+    container_name: container_a_scraper
+    depends_on:
+      container_c:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=container_c
+      - RABBITMQ_QUEUE=interpol_notices
+      - INTERPOL_API_URL=https://ws-public.interpol.int/notices/v1/red
+      - FETCH_INTERVAL_SECONDS=60
+
+  container_b:
+    build: ./container_b
+    container_name: container_b_web
+    ports:
+      - "5000:5000"
+    depends_on:
+      container_c:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=container_c
+      - RABBITMQ_QUEUE=interpol_notices
+      - PORT=5000
+      - TZ=Europe/Istanbul

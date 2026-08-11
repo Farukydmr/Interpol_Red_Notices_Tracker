@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notice Details - {{ entity_id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #121212; color: #e0e0e0 !important; font-family: 'Segoe UI', sans-serif; }
+        .card { background-color: #1e1e1e; border: 1px solid #333; color: #e0e0e0 !important; }
+        .data-label { color: #aaa; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; }
+        .data-value { font-size: 1.1rem; margin-bottom: 15px; color: #ffffff !important; }
+        .image-container img { width: 100%; max-width: 280px; border-radius: 8px; border: 1px solid #444; margin-bottom: 10px; }
+        .loader { border: 4px solid #333; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 50px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📄 Notice Details: <span class="text-info">{{ entity_id }}</span></h2>
+        <a href="/" class="btn btn-outline-light">Back to Monitor</a>
+    </div>
+
+    <div id="loading" class="text-center">
+        <div class="loader"></div>
+        <p class="text-secondary mt-2">Fetching live data from Interpol...</p>
+    </div>
+
+    <div id="content" style="display: none;">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card p-3 shadow-lg">
+                    <h5 class="border-bottom border-secondary pb-2 mb-3">Photos</h5>
+                    <div id="photos" class="image-container text-center"></div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card p-4 shadow-lg h-100">
+                    <h5 class="border-bottom border-secondary pb-2 mb-4">Personal Information</h5>
+                    <div class="row" id="personal-info"></div>
+                    <h5 class="border-bottom border-secondary pb-2 mb-4 mt-4">Arrest Warrants</h5>
+                    <div id="warrants"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    async function fetchNoticeDetail() {
+        try {
+            const response = await fetch(`/api/notice/{{ entity_id }}`);
+            const data = await response.json();
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+            if (data.error) {
+                document.getElementById('personal-info').innerHTML = `<div class="alert alert-danger w-100">Error fetching data: ${data.error}</div>`;
+                return;
+            }
+            
+            const infoMap = [
+                { label: 'Forename', value: data.forename },
+                { label: 'Name', value: data.name },
+                { label: 'Date of Birth', value: data.date_of_birth },
+                { label: 'Nationalities', value: (data.nationalities || []).join(', ') },
+                { label: 'Place of Birth', value: data.place_of_birth },
+                { label: 'Sex', value: data.sex_id },
+                { label: 'Height', value: data.height ? data.height + 'm' : null },
+                { label: 'Weight', value: data.weight ? data.weight + 'kg' : null },
+                { label: 'Distinguishing Marks', value: data.distinguishing_marks }
+            ];
+
+            const infoDiv = document.getElementById('personal-info');
+            infoMap.forEach(item => {
+                infoDiv.innerHTML += `
+                    <div class="col-md-6">
+                        <div class="data-label">${item.label}</div>
+                        <div class="data-value">${item.value || '<span style="color: #aaa;">N/A</span>'}</div>
+                    </div>`;
+            });
+
+            const photosDiv = document.getElementById('photos');
+            if (data._links && data._links.thumbnail) {
+                photosDiv.innerHTML += `<img src="${data._links.thumbnail.href}" alt="Thumbnail" />`;
+            } else {
+                 photosDiv.innerHTML = '<p class="text-muted">No photos available</p>';
+            }
+
+            const warrantsDiv = document.getElementById('warrants');
+            if (data.arrest_warrants && data.arrest_warrants.length > 0) {
+                data.arrest_warrants.forEach(w => {
+                    warrantsDiv.innerHTML += `
+                        <div class="mb-3 p-3 bg-dark border border-secondary rounded">
+                            <div class="data-label">Issuing Country: <span class="text-white">${w.issuing_country_id}</span></div>
+                            <div class="mt-2 text-warning">${w.charge || w.charge_translation || 'No charge details'}</div>
+                        </div>`;
+                });
+            } else {
+                warrantsDiv.innerHTML = '<p class="text-muted">No warrant details available</p>';
+            }
+
+        } catch (err) {
+            document.getElementById('loading').innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+        }
+    }
+    fetchNoticeDetail();
+</script>
+</body>
+</html>

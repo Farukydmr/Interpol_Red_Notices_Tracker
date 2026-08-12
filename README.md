@@ -22,6 +22,25 @@ To ensure reliable communication between the scraper and the frontend, the syste
 ### 3. Web Dashboard (`container_b`)
 A Flask-based web application serves as the frontend interface. It consumes the messages delivered by RabbitMQ and visualizes the tracking data and system status on a clean dashboard.
 
+## Software Testing
+
+The project includes both manual simulation tools and automated unit tests to ensure system integrity. All testing-related files are located in the `code_tester_object` directory.
+
+### 1. Automated Unit Tests
+The automated tests are written using Python's built-in `unittest` framework and use temporary SQLite databases to prevent interfering with actual application data.
+
+- **`test_scraper.py`**: Verifies the core logic of `container_a`. It specifically tests the MD5 hashing algorithm to ensure that dictionary key ordering does not affect the generated hash, which is critical for detecting genuine record updates.
+- **`test_storage.py`**: Verifies the database operations of `container_b`. It tests whether a mocked payload is successfully written into the SQLite database and correctly formatted (e.g., converting nationality lists to comma-separated strings) when retrieved.
+
+**How to run the unit tests:**
+From the root directory, execute the following command:
+```bash
+python -m unittest discover -s code_tester_object
+```
+
+### 2. Manual Message Simulation
+- **`doc-test.py`**: A manual testing script that acts as a mock producer. It connects directly to the RabbitMQ instance on `localhost` and publishes simulated payloads (e.g., `NEW_CRIMINAL` or `UPDATED`). This is highly useful for verifying the frontend dashboard's real-time UI updates without waiting for the actual scraper to detect live changes.
+
 ## How to Run Locally
 
 The entire system can be deployed easily using Docker. Ensure you have Docker and Docker Compose installed on your machine before proceeding.
